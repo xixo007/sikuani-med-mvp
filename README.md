@@ -12,7 +12,7 @@ Autor: Edisson Vega Izquierdo (ADSO).
 
 ## Cómo se ejecuta
 
-Es HTML, CSS y JavaScript sin dependencias. Debe servirse por `http://localhost` o `https://` (el cifrado y el modo sin conexión no funcionan abriendo el archivo directamente):
+Es HTML, CSS y JavaScript, sin instalación: la única librería, three.js, viene incluida en `vendor/`. Debe servirse por `http://localhost` o `https://` (el cifrado y el modo sin conexión no funcionan abriendo el archivo directamente):
 
 ```bash
 python -m http.server 8000
@@ -39,6 +39,9 @@ Abrir `http://localhost:8000`. La primera vez pide crear un PIN.
 | `styles.css` | Estilos; las correcciones de interfaz están en el bloque final «CORRECCIONES DE INTERFAZ» |
 | `app.js` | Lógica de la app |
 | `cifrado.js` | Bóveda local cifrada (`window.BovedaLocal`) |
+| `cuerpo3d.js` | Mapa corporal 3D: cuerpo realista que se gira con el dedo; tocar una zona la selecciona en la ficha de triage. Vista de esqueleto y cuerpo de hombre o mujer |
+| `modelos/` | `cuerpo_hombre.glb`, `cuerpo_mujer.glb` (seis zonas anatómicas tocables) y `esqueleto.glb`, de Human Base Meshes v1.4.1 de Blender Studio (licencia CC0) |
+| `vendor/three/` | three.js r180 (licencia MIT) copiado dentro de la app para que funcione sin internet |
 | `sw.js`, `manifest.webmanifest`, `iconos/` | Instalación y uso sin conexión |
 
 Pendiente de decidir por el autor: la licencia del código.

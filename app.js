@@ -365,6 +365,7 @@ function renderAnatomyFallback() {
 }
 
 function renderAnatomy() {
+  if (window.Cuerpo3D?.activo) { window.Cuerpo3D.resaltar(selectedMapRegion); return; }
   if (!anatomyCanvas) return;
   if (!anatomyRenderer) {
     initAnatomyRenderer();
@@ -1760,6 +1761,14 @@ async function start() {
   });
   document.querySelector("#zone-clinical-panel").addEventListener("click", handleZonePanelAction);
   document.querySelector("#anatomy-view-toggle").addEventListener("click", (event) => {
+    if (window.Cuerpo3D?.activo) {
+      const esqueleto = window.Cuerpo3D.modo !== "esqueleto";
+      window.Cuerpo3D.ponerModo(esqueleto ? "esqueleto" : "piel");
+      event.currentTarget.setAttribute("aria-pressed", String(esqueleto));
+      event.currentTarget.textContent = esqueleto ? "Ver piel" : "Ver esqueleto";
+      document.querySelector("#anatomy-mode-label").textContent = esqueleto ? "ESQUELETO · ARRASTRA PARA GIRAR" : "CUERPO 3D · ARRASTRA PARA GIRAR";
+      return;
+    }
     anatomyMode = anatomyMode === "scanner" ? "atlas" : "scanner";
     const isAtlas = anatomyMode === "atlas";
     document.querySelector("#anatomy-stage").classList.toggle("is-atlas", isAtlas);
