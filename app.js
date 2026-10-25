@@ -32,6 +32,7 @@ let wavePhase = 0;
 let waveChannel = "doctor";
 let activeQuickCaseId = null;
 let simulationTimer = 0;
+let simulando = false;
 let selectedEvaPain = 1;
 let selectedZoneSymptom = "";
 let anatomyMode = "scanner";
@@ -86,7 +87,6 @@ const voiceConsole = document.querySelector("#voice-console");
 const voiceStatus = document.querySelector("#voice-status");
 const voiceGenderSelect = document.querySelector("#voice-gender");
 const voiceListSelect = document.querySelector("#voice-list");
-const voiceEngineModeSelect = document.querySelector("#voice-engine-mode");
 const voiceTestButton = document.querySelector("#voice-test-button");
 const voiceEngineLabel = document.querySelector("#voice-engine-label");
 const localTtsPlayer = document.querySelector("#local-tts-player");
@@ -461,7 +461,8 @@ function startLocalRecognition(channel) {
     recognition = new Recognition();
     if (!("processLocally" in recognition)) return false;
     recognition.processLocally = true;
-    recognition.lang = channel === "doctor" ? "es-CO" : "sik";
+    if (channel !== "doctor") return false; // ningún navegador reconoce sikuani: el paciente siempre es simulado
+    recognition.lang = "es-CO";
     recognition.continuous = false;
     recognition.interimResults = true;
   } catch {
@@ -478,7 +479,7 @@ function startLocalRecognition(channel) {
     if (finalText && !finalized) {
       finalized = true;
       activeRecognition = null;
-      setVoiceStatus("Procesando fonemas Sikuani (motor local de vocabulario)...", true, channel);
+      setVoiceStatus("Buscando coincidencias en el vocabulario de ejemplo...", true, channel);
       if (channel === "doctor") processDoctorSpeech(finalText);
       else processPatientSpeech(finalText);
     }
@@ -511,15 +512,22 @@ function stopLocalRecognition() {
 
 function simulateLocalSpeech(channel, responseId = activeQuickCaseId || 2, delay = 2000) {
   if (simulationTimer) window.clearTimeout(simulationTimer);
-  setVoiceStatus(channel === "doctor" ? "Escuchando al Médico..." : "Escuchando Sikuani...", true, channel);
+  setVoiceStatus(channel === "doctor"
+    ? "Simulación: el reconocimiento de voz no está disponible en este navegador"
+    : "Simulación: respuesta de ejemplo (aún no existe reconocimiento de sikuani)", true, channel);
   simulationTimer = window.setTimeout(() => {
     simulationTimer = 0;
-    if (channel === "doctor") {
-      processDoctorSpeech("Me duele mucho el pecho y me cuesta respirar");
-      return;
+    simulando = true;
+    try {
+      if (channel === "doctor") {
+        processDoctorSpeech("Me duele mucho el pecho y me cuesta respirar");
+        return;
+      }
+      const response = patientResponses.find((item) => item.id === responseId) || patientResponses[1];
+      processPatientSpeech(response.sikuani_audio, response);
+    } finally {
+      simulando = false;
     }
-    const response = patientResponses.find((item) => item.id === responseId) || patientResponses[1];
-    processPatientSpeech(response.sikuani_audio, response);
   }, delay);
 }
 
@@ -563,7 +571,7 @@ function processDoctorSpeech(text) {
   const translated = phrase?.sikuani || [...new Set(vocabulary.map((entry) => entry.sikuani))].join(" · ");
   const phonetic = phrase?.fonetica || [...new Set(vocabulary.map((entry) => entry.fonetica))].join(" · ");
   const translation = translated || "No se encontró una coincidencia fiable en el vocabulario local.";
-  appendConversation({ direction: "doctor", original: text, translation, phonetic, speechText: translated, confidence: phrase ? "Frase rápida" : vocabulary.length ? "Vocabulario local" : "Sin coincidencia" });
+  appendConversation({ direction: "doctor", original: text, translation, phonetic, speechText: translated, confidence: phrase ? "Frase de ejemplo (sikuani no validado)" : vocabulary.length ? "Palabras sueltas del vocabulario de ejemplo (no validado)" : "Sin coincidencia" });
   if (translated) speak(translation, null, translatorStatus, "sik", phonetic, phrase?.audio || "");
   else setVoiceStatus("No hay coincidencia local fiable · prueba con síntomas o frases conocidas.");
 }
@@ -589,17 +597,17 @@ function findPatientResponse(text) {
 function processPatientSpeech(text, selectedResponse = null) {
   const response = selectedResponse || findPatientResponse(text);
   if (!response) {
-    appendConversation({ direction: "patient", original: text, translation: "Sin coincidencia exacta en las cinco respuestas Sikuani locales. Confirma la frase con el paciente.", phonetic: "", speechText: "", confidence: "Revisión requerida" });
+    appendConversation({ direction: "patient", original: text, translation: "Sin coincidencia en las cinco respuestas de ejemplo. Confirma con un intérprete.", phonetic: "", speechText: "", confidence: "Revisión requerida" });
     setVoiceStatus("Respuesta Sikuani no reconocida por el catálogo local · confirma antes de actuar.");
     return;
   }
-  appendConversation({ direction: "patient", original: text, translation: response.traduccion_es, phonetic: response.fonetica, speechText: response.traduccion_es, confidence: "Respuesta de campo", alert: response });
+  appendConversation({ direction: "patient", original: text, translation: response.traduccion_es, phonetic: response.fonetica, speechText: response.traduccion_es, confidence: "Respuesta guionizada de ejemplo", alert: response });
   pendingAlert = response;
   speak(response.traduccion_es, null, translatorStatus, "es-CO");
 }
 
 function appendConversation(entry) {
-  const message = { ...entry, time: new Date().toISOString() };
+  const message = { ...entry, simulated: entry.simulated ?? simulando, time: new Date().toISOString() };
   conversationEntries.push(message);
   renderConversation();
 }
@@ -619,15 +627,18 @@ function renderConversation() {
     const speaker = document.createElement("span");
     speaker.className = "chat-speaker";
     const roleLabel = entry.direction === "doctor" ? "Médico · Español → Sikuani" : "Paciente · Sikuani → Español";
-    speaker.textContent = entry.demo ? `DEMO · ${roleLabel}` : roleLabel;
+    speaker.textContent = entry.demo ? `EJEMPLO · ${roleLabel}` : entry.simulated ? `SIMULADO · ${roleLabel}` : roleLabel;
+    if (entry.demo || entry.simulated) turn.classList.add("is-simulated");
     const bubble = document.createElement("div");
     bubble.className = "chat-bubble";
     const original = document.createElement("p");
     original.className = "chat-original";
     original.textContent = entry.original;
+    if (entry.direction === "patient") original.lang = "sik";
     const translation = document.createElement("p");
     translation.className = "chat-translation";
     translation.textContent = entry.translation;
+    if (entry.direction === "doctor") translation.lang = "sik";
     bubble.append(original, translation);
     if (entry.phonetic) {
       const phonetic = document.createElement("p");
@@ -757,38 +768,42 @@ function normalizePatient(patient, index) {
   };
 }
 
-function loadPatients() {
+let persistencia = "memoria"; // "boveda" cuando los datos se guardan cifrados
+
+async function loadPatients() {
+  if (persistencia !== "boveda") return makeDemoPatients();
   try {
-    const stored = localStorage.getItem(storageKey);
-    const parsed = stored ? JSON.parse(stored) : [];
-    if (!Array.isArray(parsed)) throw new TypeError("La base local no tiene un formato válido.");
-    let records = parsed.map(normalizePatient);
-    const firstLaunch = localStorage.getItem(seedKey) !== "true";
-    if (records.length === 0 && firstLaunch) {
-      records = makeDemoPatients();
-      localStorage.setItem(storageKey, JSON.stringify(records));
+    let records = await window.BovedaLocal.cargar();
+    if (!records) {
+      const legado = localStorage.getItem(storageKey);
+      const parsed = legado ? JSON.parse(legado) : null;
+      records = Array.isArray(parsed) && parsed.length ? parsed : makeDemoPatients();
+      await window.BovedaLocal.guardar(records);
+      localStorage.removeItem(storageKey); // los datos antiguos en texto plano pasan a la bóveda y se borran
+      localStorage.removeItem(seedKey);
     }
-    if (firstLaunch) localStorage.setItem(seedKey, "true");
-    return records;
+    return records.map(normalizePatient);
   } catch {
     storageAvailable = false;
-    triageStatus.textContent = "No se pudo acceder al almacenamiento local. Los cambios no se conservarán.";
+    persistencia = "memoria";
+    triageStatus.textContent = "No se pudieron leer los datos cifrados. Los cambios no se conservarán.";
     return makeDemoPatients();
   }
 }
 
 function savePatients(nextPatients) {
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(nextPatients));
-    patients = nextPatients;
-    updateStorageMeter();
-    renderPatients();
-    renderAnalytics();
+  patients = nextPatients;
+  updateStorageMeter();
+  renderPatients();
+  renderAnalytics();
+  if (persistencia !== "boveda") {
+    triageStatus.textContent = "Modo demostración: el registro queda solo en memoria y se pierde al cerrar.";
     return true;
-  } catch {
-    triageStatus.textContent = "No se pudo guardar en este dispositivo. Comprueba el espacio disponible.";
-    return false;
   }
+  window.BovedaLocal.guardar(nextPatients)
+    .then(updateStorageMeter)
+    .catch(() => { triageStatus.textContent = "No se pudo guardar en este dispositivo. Comprueba el espacio disponible."; });
+  return true;
 }
 
 function updateStorageMeter() {
@@ -862,7 +877,7 @@ function resetSpeechButton() {
 
 function getVoicePreferenceScore(voice) {
   const name = normalizeText(voice.name);
-  const naturalTerms = ["natural", "online", "neural", "google español", "salome", "dalia", "jorge", "sabina", "gonzalo", "alvaro", "helena"];
+  const naturalTerms = [ "salome", "dalia", "jorge", "sabina", "gonzalo", "alvaro", "helena"];
   const naturalIndex = naturalTerms.findIndex((term) => name.includes(normalizeText(term)));
   const locale = voice.lang.toLocaleLowerCase("es");
   const localeScore = locale === "es-co" ? 70 : locale.startsWith("es-mx") ? 55 : locale.startsWith("es-es") ? 45 : 25;
@@ -872,7 +887,9 @@ function getVoicePreferenceScore(voice) {
 
 function updateSpeechVoiceList(voices = speechVoices) {
   speechVoices = voices;
-  const spanishVoices = voices.map((voice, index) => ({ voice, index })).filter(({ voice }) => /^es(?:-|$)/i.test(voice.lang));
+  const allSpanish = voices.map((voice, index) => ({ voice, index })).filter(({ voice }) => /^es(?:-|$)/i.test(voice.lang));
+  const installed = allSpanish.filter(({ voice }) => voice.localService);
+  const spanishVoices = installed.length ? installed : allSpanish;
   const selected = voiceListSelect.value;
   voiceListSelect.replaceChildren();
   const automatic = document.createElement("option");
@@ -895,7 +912,9 @@ function chooseSpeechVoice() {
   if (requestedIndex !== "auto") {
     activeSpeechVoice = speechVoices[Number(requestedIndex)] || null;
   } else {
-    const spanishVoices = speechVoices.filter((voice) => /^es(?:-|$)/i.test(voice.lang));
+    const allSpanish = speechVoices.filter((voice) => /^es(?:-|$)/i.test(voice.lang));
+    const installed = allSpanish.filter((voice) => voice.localService);
+    const spanishVoices = installed.length ? installed : allSpanish;
     const preferredNames = voiceGender === "female"
       ? ["sabina", "dalia", "salome", "helena", "zira"]
       : ["salome", "dalia", "jorge", "gonzalo", "alvaro", "raul", "david", "mark"];
@@ -980,20 +999,6 @@ function reproducirAudioLocal(audioPath) {
   });
 }
 
-async function reproducirStreamHD(texto, language) {
-  if (!navigator.onLine || typeof window.SIKUANI_STREAM_TTS !== "function") return false;
-  try {
-    const result = await window.SIKUANI_STREAM_TTS({ text: texto, language });
-    if (!(result instanceof Blob) && typeof result !== "string") return false;
-    const objectUrl = result instanceof Blob ? URL.createObjectURL(result) : result;
-    const played = await reproducirAudioLocal(objectUrl);
-    if (result instanceof Blob) URL.revokeObjectURL(objectUrl);
-    return played;
-  } catch {
-    return false;
-  }
-}
-
 async function speak(text, button, statusNode = translatorStatus, language = "es-CO", phonetic = "", audioPath = "") {
   const request = ++speechRequestId;
   const isSikuani = language === "sik";
@@ -1015,24 +1020,13 @@ async function speak(text, button, statusNode = translatorStatus, language = "es
     if (request !== speechRequestId) return;
   }
 
-  if (voiceEngineModeSelect.value === "hd") {
-    const localAudioPlayed = await reproducirAudioLocal(audioPath);
-    if (request !== speechRequestId) return;
-    if (localAudioPlayed) {
-      statusNode.textContent = "Reproduciendo audio clínico local.";
-      resetSpeechButton();
-      setVoiceStatus("Reproduciendo traducción...", true, isSikuani ? "patient" : "doctor");
-      return;
-    }
-    const neuralAudioPlayed = await reproducirStreamHD(spokenText, language);
-    if (request !== speechRequestId) return;
-    if (neuralAudioPlayed) {
-      statusNode.textContent = "Reproduciendo Audio HD.";
-      resetSpeechButton();
-      setVoiceStatus("Reproduciendo traducción...", true, isSikuani ? "patient" : "doctor");
-      return;
-    }
-    voiceEngineLabel.textContent = `HD no configurado · ${voice?.name || "voz local"}`;
+  const localAudioPlayed = await reproducirAudioLocal(audioPath);
+  if (request !== speechRequestId) return;
+  if (localAudioPlayed) {
+    statusNode.textContent = "Reproduciendo audio grabado.";
+    resetSpeechButton();
+    setVoiceStatus("Reproduciendo traducción...", true, isSikuani ? "patient" : "doctor");
+    return;
   }
 
   if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
@@ -1665,8 +1659,66 @@ function seedConversationPreview() {
   ];
 }
 
-function start() {
-  patients = loadPatients();
+function pedirDesbloqueo() {
+  const dialog = document.querySelector("#lock-dialog");
+  const form = document.querySelector("#lock-form");
+  const pin = document.querySelector("#lock-pin");
+  const confirm = document.querySelector("#lock-pin-confirm");
+  const confirmField = document.querySelector("#lock-confirm-field");
+  const status = document.querySelector("#lock-status");
+  const submit = document.querySelector("#lock-submit");
+  const reset = document.querySelector("#lock-reset");
+  const boveda = window.BovedaLocal;
+  return new Promise((resolve) => {
+    if (!boveda || !boveda.disponible()) {
+      document.querySelector("#offline-state").textContent = "sin cifrado: datos solo en memoria";
+      resolve("memoria");
+      return;
+    }
+    const existe = boveda.existe();
+    confirmField.hidden = existe;
+    confirm.required = !existe;
+    reset.hidden = !existe;
+    if (existe) {
+      document.querySelector("#lock-title").textContent = "Desbloquear";
+      document.querySelector("#lock-help").textContent = "Escribe el PIN de este equipo para abrir los registros cifrados.";
+      submit.textContent = "Desbloquear";
+    }
+    dialog.addEventListener("cancel", (event) => event.preventDefault());
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!/^[0-9]{4,8}$/.test(pin.value)) { status.textContent = "El PIN debe tener de 4 a 8 dígitos."; return; }
+      if (!existe && pin.value !== confirm.value) { status.textContent = "Los PIN no coinciden."; return; }
+      submit.disabled = true;
+      status.textContent = existe ? "Abriendo..." : "Creando la bóveda cifrada...";
+      try {
+        if (existe) await boveda.abrir(pin.value); else await boveda.crear(pin.value);
+        pin.value = ""; confirm.value = "";
+        dialog.close();
+        resolve("boveda");
+      } catch (error) {
+        status.textContent = error.message || "No se pudo abrir.";
+        submit.disabled = false;
+      }
+    });
+    document.querySelector("#lock-demo").addEventListener("click", () => {
+      document.querySelector("#offline-state").textContent = "demostración: nada se guarda";
+      dialog.close();
+      resolve("memoria");
+    });
+    reset.addEventListener("click", () => {
+      if (!window.confirm("Se borrarán TODOS los registros cifrados de este equipo. ¿Continuar?")) return;
+      boveda.borrarTodo();
+      window.location.reload();
+    });
+    dialog.showModal();
+    pin.focus();
+  });
+}
+
+async function start() {
+  persistencia = await pedirDesbloqueo();
+  patients = await loadPatients();
   seedConversationPreview();
   makeCategoryFilters();
   renderPhrases();
@@ -1686,11 +1738,6 @@ function start() {
     refreshSpeechVoices();
   });
   voiceListSelect.addEventListener("change", chooseSpeechVoice);
-  voiceEngineModeSelect.addEventListener("change", () => {
-    voiceEngineLabel.textContent = voiceEngineModeSelect.value === "hd"
-      ? `${activeSpeechVoice?.name || "Voz local"} · HD si está configurado`
-      : activeSpeechVoice?.name || "Voz española del sistema";
-  });
   voiceTestButton.addEventListener("click", () => speak("Hola, prueba de voz clínica. ¿Cómo se siente hoy?", voiceTestButton, translatorStatus, "es-CO"));
   refreshSpeechVoices();
   if ("speechSynthesis" in window) {
@@ -1717,8 +1764,8 @@ function start() {
     const isAtlas = anatomyMode === "atlas";
     document.querySelector("#anatomy-stage").classList.toggle("is-atlas", isAtlas);
     event.currentTarget.setAttribute("aria-pressed", String(isAtlas));
-    event.currentTarget.textContent = isAtlas ? "Cambiar vista: Escáner 3D" : "Cambiar vista: Atlas Muscular";
-    document.querySelector("#anatomy-mode-label").textContent = isAtlas ? "ATLAS MUSCULAR · ÓRGANOS VITALES" : "ESCÁNER BIOMÉTRICO · FRONTAL";
+    event.currentTarget.textContent = isAtlas ? "Vista: frontal" : "Vista: órganos";
+    document.querySelector("#anatomy-mode-label").textContent = isAtlas ? "VISTA DE ÓRGANOS" : "VISTA FRONTAL";
     renderAnatomy();
   });
   document.querySelector("#triage-zone").addEventListener("change", (event) => setSelectedZone(event.target.value));
@@ -1770,9 +1817,17 @@ function start() {
     if (!document.querySelector("#view-analytics").hidden) renderAnalytics();
   });
   if (!storageAvailable) translatorStatus.textContent = "Modo local solo en memoria: el almacenamiento del navegador no está disponible.";
+  document.querySelector("#lock-button").addEventListener("click", () => {
+    window.BovedaLocal?.cerrar();
+    window.location.reload();
+  });
 }
 
 start();
+
+if ("serviceWorker" in navigator && window.isSecureContext && location.protocol !== "file:") {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
 
 /* ==========================================================================
    MOTOR DE VOZ BLINDADO: PRIORIZA VOCES REALES FUNCIONALES (SABINA / RAUL)
