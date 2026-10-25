@@ -412,7 +412,7 @@ function startWaveform() {
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.clearRect(0, 0, width, height);
     const active = voiceConsole.classList.contains("is-listening");
-    const tint = waveChannel === "patient" ? [6, 182, 212] : [16, 185, 129];
+    const tint = waveChannel === "patient" ? [96, 108, 56] : [154, 69, 34]; // musgo (paciente) y terracota (médico)
     const bars = Math.max(24, Math.floor(width / 8));
     const gap = 3;
     const barWidth = Math.max(2, (width - bars * gap) / bars);
