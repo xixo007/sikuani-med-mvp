@@ -1,7 +1,7 @@
 /* Service worker: guarda la aplicación en caché para abrirla sin conexión.
    Cambiar VERSION en cada publicación para limpiar cachés antiguas. */
-const VERSION = "sikuani-med-v3";
-const ARCHIVOS = ["./", "./index.html", "./styles.css", "./app.js", "./cifrado.js", "./manifest.webmanifest", "./iconos/icono-192.png", "./iconos/icono-512.png"];
+const VERSION = "traductor-sikuani-v1";
+const ARCHIVOS = ["./", "./index.html", "./styles.css", "./app.js", "./motor.js", "./datos.js", "./manifest.webmanifest", "./iconos/icono.svg", "./iconos/icono-192.png", "./iconos/icono-512.png"];
 
 self.addEventListener("install", (evento) => {
   evento.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(ARCHIVOS)).then(() => self.skipWaiting()));

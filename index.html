@@ -2,224 +2,111 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0F172A">
-  <meta name="description" content="Prototipo de demostración: interpretación clínica español–sikuani (simulada), triage, sala de espera y analítica local.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f2a25" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0b1412" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="Traductor español ↔ sikuani que funciona sin conexión. Prototipo de demostración.">
+  <title>Traductor Sikuani</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="iconos/icono-192.png" type="image/png">
+  <link rel="icon" href="iconos/icono.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="iconos/icono-192.png">
-  <title>Sikuani Med Pro | Prototipo de demostración</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="cifrado.js" defer></script>
+  <script src="datos.js" defer></script>
+  <script src="motor.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
-  <header class="suite-header">
-    <a class="suite-brand" href="#translator" aria-label="Sikuani Med Pro, inicio">
-      <span class="brand-symbol" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M16 3v26M3 16h26"/><path class="brand-cut" d="M16 3v26M3 16h26"/></svg></span>
-      <span class="brand-copy"><strong>Sikuani Med <i>Pro</i></strong><span class="author-byline">by Edisson Vega Izquierdo</span><span class="engine-badge"><span class="pulse-dot"></span>Prototipo <b>•</b> <span id="offline-state">datos cifrados en este equipo</span></span></span>
-    </a>
-    <div class="header-tools">
-      <button class="lock-button" id="lock-button" type="button" aria-label="Bloquear la aplicación" title="Bloquear"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 9h10v8H5zM7 9V6a3 3 0 0 1 6 0v3"/></svg><span>Bloquear</span></button>
-      <span class="storage-meter" title="Espacio ocupado por los datos cifrados en este equipo"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5h14v11H3zM6 3h8v2.5M7 9h6M7 12h4"/></svg><span id="storage-size">0 KB</span></span>
-      <button class="sun-toggle" id="contrast-toggle" type="button" aria-pressed="false" aria-label="Alto Contraste (Modo Sol)" title="Alto Contraste (Modo Sol)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg><span>Modo Sol</span></button>
+  <header class="barra">
+    <div class="barra-in">
+      <a class="marca" href="./" aria-label="Traductor Sikuani, inicio">
+        <svg class="marca-icono" viewBox="0 0 40 40" aria-hidden="true">
+          <rect width="40" height="40" rx="11" fill="currentColor"/>
+          <path d="M10 13.5c0-1.9 1.6-3.5 3.5-3.5h9c1.9 0 3.5 1.6 3.5 3.5v5c0 1.9-1.6 3.5-3.5 3.5h-5.2L13 25.5V22h.5A3.5 3.5 0 0 1 10 18.5z" fill="#f4efe4"/>
+          <path d="M28.5 17h.2c1.8 0 3.3 1.5 3.3 3.3v4.4c0 1.8-1.5 3.3-3.3 3.3H28v3l-3.8-3h-4.5c-1.6 0-2.9-1.1-3.2-2.6h5.9c3.2 0 5.8-2.6 5.8-5.8z" fill="#d99a3d"/>
+        </svg>
+        <span class="marca-texto"><strong>Traductor Sikuani</strong><small>Español ↔ sikuani</small></span>
+      </a>
+      <span class="estado" id="estado" role="status"><span class="estado-punto"></span><span id="estado-texto" class="estado-largo">Comprobando…</span><span id="estado-corto" class="estado-corto">…</span></span>
     </div>
   </header>
-  
 
-  <main class="suite-main">
-    <div class="demo-banner" role="note"><strong>Modo demostración</strong><span>La conversación en sikuani es simulada y el vocabulario no ha sido validado por hablantes. No usar para decisiones clínicas.</span></div>
-    <section class="app-view is-active" id="view-translator" data-view="translator" aria-labelledby="translator-title">
-      <div class="voice-app-heading"><div><p class="eyebrow">SIKUANI MED · INTERPRETACIÓN</p><h1 id="translator-title">Hablemos <em>sin barreras</em></h1></div><button class="face-mode-button" id="face-mode-toggle" type="button" aria-pressed="false" aria-label="Activar modo cara a cara"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14v12H3zM10 4v12M6 8h1m6 0h1m-8 4h1m6 0h1"/></svg><span>Cara a cara</span></button></div>
-      <div class="quick-case-rail" aria-label="Casos de simulación de un toque">
-        <button class="case-chip" type="button" data-case-id="3"><span>🐍</span>Mordedura</button>
-        <button class="case-chip" type="button" data-case-id="2"><span>🫀</span>Dolor de pecho</button>
-        <button class="case-chip" type="button" data-case-id="1"><span>🤒</span>Fiebre alta</button>
-        <button class="case-chip" type="button" data-case-id="5"><span>🤰</span>Urgencia parto</button>
-        <button class="case-chip" type="button" data-case-id="4"><span>👶</span>Niño deshidratado</button>
+  <main class="contenido">
+    <p class="aviso" role="note">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 6v5m0 3h.01"/></svg>
+      <span><strong>Versión de demostración.</strong> Traduce solo frases y palabras de ejemplo que aún no han sido validadas por hablantes sikuani. No la uses para decisiones importantes.</span>
+    </p>
+
+    <section class="traductor" aria-label="Traductor">
+      <div class="idiomas" role="group" aria-label="Dirección de traducción">
+        <span class="idioma" id="idioma-origen">Español</span>
+        <button class="intercambiar" id="intercambiar" type="button" aria-label="Intercambiar idiomas" title="Intercambiar idiomas">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg>
+        </button>
+        <span class="idioma" id="idioma-destino">Sikuani</span>
       </div>
 
-      <section class="voice-console voice-console-clean" id="voice-console" aria-label="Conversación médica bilingüe">
-        <div class="voice-console-topline">
-          <div class="live-indicator"><span class="live-dot"></span><span id="voice-status" role="status" aria-live="polite">Conversación de ejemplo · toca un micrófono para comenzar</span></div>
-          <details class="voice-settings">
-            <summary>Ajustes de voz</summary>
-            <div class="voice-engine-control">
-              <label class="sr-only" for="voice-gender">Timbre de voz</label><select id="voice-gender" aria-label="Timbre de voz"><option value="female">Voz femenina</option><option value="male">Voz masculina</option></select>
-              <label class="sr-only" for="voice-list">Voz instalada en el equipo</label><select id="voice-list" aria-label="Elegir voz instalada"><option value="auto">Mejor voz disponible</option></select>
-              <button class="voice-test-button" id="voice-test-button" type="button" aria-label="Probar voz seleccionada" title="Probar voz">Probar</button>
-              <span class="voice-engine-label" id="voice-engine-label" aria-live="polite">Voz del sistema</span>
-              <p class="voice-note">El sikuani se lee de forma aproximada con una voz en español: aún no existe una voz sikuani.</p>
-            </div>
-          </details>
+      <div class="paneles">
+        <div class="panel panel-origen">
+          <label class="sr-only" for="entrada">Texto a traducir</label>
+          <textarea id="entrada" rows="4" maxlength="500" placeholder="Escribe en español" autocomplete="off" spellcheck="true"></textarea>
+          <div class="panel-pie">
+            <button class="boton-icono" id="dictar" type="button" aria-label="Dictar en español" title="Dictar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-5a3.5 3.5 0 0 0-7 0v5A3.5 3.5 0 0 0 12 15Z"/><path d="M18.5 11.5a6.5 6.5 0 0 1-13 0M12 18v3"/></svg>
+            </button>
+            <span class="contador" id="contador">0 / 500</span>
+            <button class="boton-icono" id="borrar" type="button" aria-label="Borrar texto" title="Borrar" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+          </div>
+          <p class="nota-dictado" id="nota-dictado" hidden></p>
         </div>
-        <div class="conversation-history" id="conversation-history" aria-live="polite"></div>
-        <div class="voice-orb-zone" id="wave-wrap" aria-live="polite">
-          <div class="voice-orb" id="voice-orb"><canvas id="voice-waveform" aria-label="Ondas de voz"></canvas></div>
-          <span class="wave-caption" id="wave-caption">ESCUCHANDO</span>
+
+        <div class="panel panel-destino" aria-live="polite">
+          <div class="resultado" id="resultado">
+            <p class="resultado-vacio">La traducción aparecerá aquí.</p>
+          </div>
+          <div class="panel-pie" id="acciones" hidden>
+            <button class="boton-icono" id="escuchar" type="button" aria-label="Escuchar la traducción" title="Escuchar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l5 4V6L7 10H4Z"/><path d="M16 9a4 4 0 0 1 0 6m2.5-8.5a7.5 7.5 0 0 1 0 11"/></svg>
+            </button>
+            <span class="etiqueta" id="etiqueta"></span>
+            <button class="boton-icono" id="copiar" type="button" aria-label="Copiar la traducción" title="Copiar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M5 15V6a1 1 0 0 1 1-1h9"/></svg>
+            </button>
+            <button class="boton-icono" id="guardar" type="button" aria-label="Guardar en favoritas" aria-pressed="false" title="Guardar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4 2.4 5 5.4.6-4 3.7 1.1 5.4L12 16l-4.9 2.7 1.1-5.4-4-3.7 5.4-.6z"/></svg>
+            </button>
+          </div>
         </div>
-        <p class="app-status sr-only" id="translator-status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="bloque" aria-labelledby="titulo-frases">
+      <div class="bloque-cabeza">
+        <h2 id="titulo-frases">Frases de ejemplo</h2>
+        <div class="filtros" id="filtros" role="group" aria-label="Filtrar frases por tema"></div>
+      </div>
+      <ul class="frases" id="frases"></ul>
+    </section>
+
+    <div class="dos-columnas">
+      <section class="bloque" aria-labelledby="titulo-favoritas">
+        <div class="bloque-cabeza"><h2 id="titulo-favoritas">Favoritas</h2></div>
+        <ul class="lista" id="favoritas"></ul>
       </section>
-
-      <details class="quick-phrases-drawer" id="quick-phrases">
-        <summary><span class="quick-summary-icon"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m11 1-8 10h6l-1 8 9-11h-6z"/></svg></span><span><strong>Frases de emergencia de 1 toque</strong><small id="phrase-count">Frases de ejemplo · sikuani no validado</small></span><span class="drawer-chevron"></span></summary>
-        <div class="quick-phrase-content">
-          <div class="translator-controls">
-            <label class="search-control"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input id="phrase-search" type="search" placeholder="Buscar frase en español..." aria-label="Buscar frases en español" autocomplete="off"></label>
-            <div class="voice-speed" role="group" aria-label="Velocidad de voz"><span>VOZ</span><button type="button" data-rate="0.7" aria-pressed="false">0.7×</button><button type="button" data-rate="1" aria-pressed="true">1.0×</button></div>
-          </div>
-          <div class="category-filters" id="category-filters" role="group" aria-label="Filtrar por categoría"></div>
-          <div class="phrase-grid" id="phrase-list" aria-live="polite"></div>
+      <section class="bloque" aria-labelledby="titulo-historial">
+        <div class="bloque-cabeza">
+          <h2 id="titulo-historial">Recientes</h2>
+          <button class="enlace" id="borrar-historial" type="button" hidden>Borrar</button>
         </div>
-      </details>
-
-      <div class="voice-dock" aria-label="Controles de conversación">
-        <button class="mic-button doctor-mic-button" id="doctor-mic" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v4a4 4 0 0 0 4 4Zm7-4a7 7 0 0 1-14 0m7 7v4m-4 0h8"/></svg><span><strong>Hablar Médico</strong><small>ES → SIK</small></span></button>
-        <button class="mic-button patient-mic-button" id="patient-mic" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v4a4 4 0 0 0 4 4Zm7-4a7 7 0 0 1-14 0m7 7v4m-4 0h8"/></svg><span><strong>Escuchar Paciente</strong><small>SIK → ES</small></span></button>
-      </div>
-
-      
-    </section>
-
-    <section class="app-view" id="view-triage" data-view="triage" aria-labelledby="triage-title" hidden>
-      <div class="view-heading"><div><p class="eyebrow">VALORACIÓN INICIAL</p><h1 id="triage-title">Mapa corporal <em>& triage</em></h1><p class="view-subtitle">Selecciona una zona y registra la prioridad clínica.</p></div><div class="view-index">02 <span>/ 04</span></div></div>
-      <div class="triage-layout">
-        <section class="panel body-map-panel" aria-labelledby="body-map-title">
-          <div class="panel-heading"><div><p class="panel-kicker">LOCALIZACIÓN</p><h2 id="body-map-title">Mapa corporal</h2></div><button class="map-view-toggle" id="anatomy-view-toggle" type="button" aria-pressed="false">Vista: órganos</button></div>
-          <div class="anatomy-workspace">
-            <div class="anatomy-stage" id="anatomy-stage">
-              <canvas class="anatomy-canvas" id="anatomy-canvas" aria-label="Mapa corporal interactivo"></canvas>
-              <div class="anatomy-stage-label"><span class="scan-signal"></span><span id="anatomy-mode-label">VISTA FRONTAL</span></div>
-              <span class="anatomy-callout callout-head">CABEZA</span>
-              <span class="anatomy-callout callout-chest">TÓRAX</span>
-              <span class="anatomy-callout callout-abdomen">ABDOMEN</span>
-              <span class="anatomy-callout callout-arms">BRAZOS</span>
-              <span class="anatomy-callout callout-legs">PIERNAS</span>
-              <button class="biometric-node node-head" type="button" data-zone="Cabeza" data-region="Cabeza" aria-label="Explorar cabeza y neurología"><span></span></button>
-              <button class="biometric-node node-chest" type="button" data-zone="Pecho" data-region="Torax" aria-label="Explorar tórax, pulmones y corazón"><span></span></button>
-              <button class="biometric-node node-abdomen" type="button" data-zone="Abdomen" data-region="Abdomen" aria-label="Explorar abdomen, digestivo y materno"><span></span></button>
-              <button class="biometric-node node-arm-left" type="button" data-zone="Extremidades" data-region="ExtremidadesSuperiores" aria-label="Explorar brazo izquierdo"><span></span></button>
-              <button class="biometric-node node-arm-right" type="button" data-zone="Extremidades" data-region="ExtremidadesSuperiores" aria-label="Explorar brazo derecho"><span></span></button>
-              <button class="biometric-node node-legs" type="button" data-zone="Extremidades" data-region="ExtremidadesInferiores" aria-label="Explorar piernas y pies"><span></span></button>
-            </div>
-            <div class="zone-clinical-panel" id="zone-clinical-panel" aria-live="polite"><div class="zone-panel-empty"><span class="zone-panel-cross">+</span><strong>Selecciona una zona del cuerpo</strong><small>La zona clínica, la pregunta de ejemplo en sikuani (no validada) y la escala EVA aparecerán aquí.</small></div></div>
-          </div>
-          <div class="selected-zone-note"><span class="zone-indicator"></span><span>Zona de triage: <strong id="selected-zone-label">General</strong></span></div>
-          <div class="zone-phrases" id="zone-phrases"></div>
-        </section>
-
-        <section class="panel clinical-form-panel" aria-labelledby="clinical-form-title">
-          <div class="panel-heading"><div><p class="panel-kicker">REGISTRO LOCAL</p><h2 id="clinical-form-title">Ficha de triage</h2></div><span class="panel-tag">OFFLINE</span></div>
-          <form id="triage-form" class="clinical-form">
-            <div class="form-grid">
-              <label class="form-field span-two"><span>Nombre del paciente</span><input name="name" required maxlength="100" autocomplete="off" placeholder="Nombre completo"></label>
-              <label class="form-field"><span>Edad</span><input name="age" type="number" min="0" max="120" inputmode="numeric" required placeholder="Años"></label>
-              <label class="form-field span-two"><span>Comunidad / Resguardo</span><input name="community" required maxlength="100" autocomplete="off" placeholder="Comunidad"></label>
-              <label class="form-field"><span>Temp. °C</span><input name="temperature" type="number" step="0.1" min="25" max="45" inputmode="decimal" placeholder="36.5"></label>
-              <label class="form-field"><span>FC lpm</span><input name="heartRate" type="number" min="20" max="250" inputmode="numeric" placeholder="72"></label>
-              <label class="form-field"><span>SpO₂ %</span><input name="spo2" type="number" min="50" max="100" inputmode="numeric" placeholder="98"></label>
-              <label class="form-field span-two"><span>Síntoma principal</span><input name="symptom" required maxlength="180" autocomplete="off" placeholder="Motivo de consulta"></label>
-              <label class="form-field span-two"><span>Zona afectada</span><select name="zone" id="triage-zone" required><option value="General">General</option><option value="Cabeza">Cabeza</option><option value="Pecho">Pecho</option><option value="Abdomen">Abdomen</option><option value="Extremidades">Extremidades</option></select></label>
-            </div>
-            <fieldset class="manchester-field"><legend>Nivel de triage Manchester</legend><div class="manchester-options">
-              <label class="manchester-option level-one"><input type="radio" name="level" value="I" required><span class="level-number">I</span><span><strong>Rojo</strong><small>Crítico</small></span></label>
-              <label class="manchester-option level-two"><input type="radio" name="level" value="II" required><span class="level-number">II</span><span><strong>Naranja</strong><small>Grave</small></span></label>
-              <label class="manchester-option level-three"><input type="radio" name="level" value="III" required><span class="level-number">III</span><span><strong>Amarillo</strong><small>Urgente</small></span></label>
-              <label class="manchester-option level-four"><input type="radio" name="level" value="IV" required><span class="level-number">IV</span><span><strong>Verde</strong><small>Estándar</small></span></label>
-            </div></fieldset>
-            <div class="form-submit-row"><span class="local-only-note">Los datos quedan cifrados en este dispositivo.</span><button class="primary-button" type="submit">Guardar triage localmente <span aria-hidden="true">→</span></button></div>
-            <p class="app-status" id="triage-status" role="status" aria-live="polite"></p>
-          </form>
-        </section>
-      </div>
-    </section>
-
-    <section class="app-view" id="view-patients" data-view="patients" aria-labelledby="patients-title" hidden>
-      <div class="view-heading"><div><p class="eyebrow">FLUJO ASISTENCIAL</p><h1 id="patients-title">Sala de <em>espera</em></h1><p class="view-subtitle">Ordenada por prioridad clínica y hora de ingreso.</p></div><div class="view-index">03 <span>/ 04</span></div></div>
-      <div class="queue-summary"><span><i class="summary-dot dot-active"></i>Activos <strong id="active-count">0</strong></span><span><i class="summary-dot dot-done"></i>Atendidos <strong id="done-count">0</strong></span><span id="demo-note" hidden>Registros DEMO</span></div>
-      <div class="patient-queue" id="patient-queue" aria-live="polite"></div>
-      <section class="attended-panel"><div class="section-title-row"><div><p class="panel-kicker">CIERRE DE ATENCIÓN</p><h2>Atendidos</h2></div><span class="count-badge" id="attended-total">0</span></div><div id="attended-queue" class="patient-queue"></div></section>
-    </section>
-
-    <section class="app-view" id="view-analytics" data-view="analytics" aria-labelledby="analytics-title" hidden>
-      <div class="view-heading"><div><p class="eyebrow">LECTURA OPERATIVA</p><h1 id="analytics-title">Analítica <em>& datos</em></h1><p class="view-subtitle">Resumen local de actividad para esta brigada.</p></div><div class="view-index">04 <span>/ 04</span></div></div>
-      <div class="kpi-grid">
-        <article class="kpi-card"><span class="kpi-label">TOTAL PACIENTES</span><strong id="kpi-total">0</strong><span class="kpi-foot">Registros en esta base</span></article>
-        <article class="kpi-card kpi-critical"><span class="kpi-label">CRÍTICOS</span><strong id="kpi-critical">0</strong><span class="kpi-foot">Manchester I y II</span></article>
-        <article class="kpi-card kpi-complete"><span class="kpi-label">ATENDIDOS</span><strong id="kpi-attended">0</strong><span class="kpi-foot">Atención cerrada</span></article>
-        <article class="kpi-card kpi-efficiency"><span class="kpi-label">EFICIENCIA</span><strong id="kpi-efficiency">0%</strong><span class="kpi-foot">Atendidos / total</span></article>
-      </div>
-      <div class="chart-grid">
-        <section class="panel chart-panel"><div class="panel-heading"><div><p class="panel-kicker">SEVERIDAD</p><h2>Pacientes por nivel</h2></div><span class="chart-unit">PERSONAS</span></div><canvas id="priority-chart" aria-label="Gráfico de pacientes por prioridad Manchester"></canvas></section>
-        <section class="panel chart-panel"><div class="panel-heading"><div><p class="panel-kicker">PROCEDENCIA</p><h2>Por comunidad</h2></div><span class="chart-unit">PERSONAS</span></div><canvas id="community-chart" aria-label="Gráfico de pacientes por comunidad"></canvas></section>
-      </div>
-      <section class="export-panel"><div><p class="panel-kicker">RESPALDO Y SINCRONIZACIÓN</p><h2>Exportar base clínica</h2><p>Genera archivos locales para resguardo o transferencia autorizada. <strong>Los archivos exportados no van cifrados.</strong></p></div><div class="export-actions"><button class="secondary-button" id="export-csv" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v11m-4-4 4 4 4-4M3 14v3h14v-3"/></svg>Descargar Base de Datos (CSV/Excel)</button><button class="primary-button" id="export-json" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v11m-4-4 4 4 4-4M3 14v3h14v-3"/></svg>Exportar Backup JSON</button></div><p class="app-status" id="export-status" role="status" aria-live="polite"></p></section>
-      <footer class="institutional-credit">Arquitectura y Desarrollo Principal: <strong>Edisson Vega Izquierdo • ADSO</strong></footer>
-    </section>
+        <ul class="lista" id="historial"></ul>
+      </section>
+    </div>
   </main>
 
-  <nav class="bottom-nav" aria-label="Navegación principal">
-    <button class="nav-item is-current" type="button" data-view-target="translator" aria-label="Traductor Clínico" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h10a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H9l-5 4V5Z"/><path d="M8 9h5m-5 3h3"/></svg><span>Traductor Clínico</span></button>
-    <button class="nav-item" type="button" data-view-target="triage" aria-label="Mapa Corporal y Triage"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-8-4.5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6.5-8 11-8 11Z"/><path d="M8 12h2l1.2-2.5L13 15l1.2-3H16"/></svg><span>Mapa Corporal & Triage</span></button>
-    <button class="nav-item" type="button" data-view-target="patients" aria-label="Sala de Espera (Pacientes)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v17H5zM8 8h8m-8 4h8m-8 4h5"/><path d="M9 2h6v4H9z"/></svg><span>Sala de Espera</span><span class="nav-count" id="nav-patient-count">0</span></button>
-    <button class="nav-item" type="button" data-view-target="analytics" aria-label="Analítica y Exportación"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V4m0 16h17M8 16v-5m5 5V7m5 9v-8"/></svg><span>Analítica & Exportación</span></button>
-  </nav>
-
-  <dialog class="patient-dialog" id="patient-dialog" aria-labelledby="patient-dialog-title">
-    <div class="dialog-topline"><span>VISTA PARA PACIENTE</span><button class="icon-button" id="close-patient-dialog" type="button" aria-label="Cerrar pantalla paciente">×</button></div>
-    <div class="patient-display"><p id="patient-dialog-spanish"></p><h2 id="patient-dialog-title" lang="sik"></h2><p id="patient-dialog-phonetic"></p></div>
-    <button class="patient-audio-button" id="patient-dialog-audio" type="button" aria-label="Escuchar frase en Sikuani"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l8-4-8-4Z"/><path d="M16 9a4 4 0 0 1 0 6m3-9a8 8 0 0 1 0 12"/></svg><span>Escuchar</span></button>
-  </dialog>
-  <dialog class="lock-dialog" id="lock-dialog" aria-labelledby="lock-title">
-    <form class="lock-form" id="lock-form" method="dialog">
-      <span class="lock-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M5 9h10v8H5zM7 9V6a3 3 0 0 1 6 0v3"/></svg></span>
-      <h2 id="lock-title">Proteger los datos de este equipo</h2>
-      <p id="lock-help">Crea un PIN de 4 a 8 dígitos. Los registros de pacientes se guardan cifrados con él. Si lo olvidas, no se pueden recuperar.</p>
-      <label class="form-field"><span>PIN</span><input id="lock-pin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="off" required></label>
-      <label class="form-field" id="lock-confirm-field"><span>Repite el PIN</span><input id="lock-pin-confirm" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="off"></label>
-      <p class="app-status" id="lock-status" role="status" aria-live="polite"></p>
-      <button class="primary-button" id="lock-submit" type="submit">Crear PIN y continuar</button>
-      <button class="secondary-button" id="lock-demo" type="button">Usar sin guardar (solo demostración)</button>
-      <button class="text-button" id="lock-reset" type="button" hidden>Olvidé el PIN: borrar los datos de este equipo</button>
-    </form>
-  </dialog>
-  <section id="referral-print" class="referral-print" aria-label="Remisión clínica imprimible"></section>
-  <audio id="local-tts-player" preload="none"></audio>
-  <script type="application/json" id="clinical-data">
-  {
-    "vocabulario_clinico": [
-      { "es": ["hola", "buenos dias", "buenas tardes"], "sikuani": "Tsipae", "fonetica": "Tsi-pae" },
-      { "es": ["donde", "en que parte", "señale"], "sikuani": "Detsa", "fonetica": "Det-sa" },
-      { "es": ["duele", "dolor", "molestia", "ardor"], "sikuani": "juka", "fonetica": "ju-ka" },
-      { "es": ["cabeza", "frente", "craneo"], "sikuani": "pemata", "fonetica": "pe-ma-ta" },
-      { "es": ["pecho", "corazon", "torax"], "sikuani": "pexania", "fonetica": "pe-xa-nia" },
-      { "es": ["respirar", "aire", "ahogo", "falta de aire"], "sikuani": "aje yabara", "fonetica": "a-je ya-ba-ra" },
-      { "es": ["estomago", "barriga", "abdomen", "vientre"], "sikuani": "pekotsi", "fonetica": "pe-ko-tsi" },
-      { "es": ["fiebre", "calentura", "temperatura", "escalofrios"], "sikuani": "atsipa jani", "fonetica": "at-si-pa ja-ni" },
-      { "es": ["tos", "toser", "flema"], "sikuani": "okojeka", "fonetica": "o-ko-je-ka" },
-      { "es": ["vomito", "vomitar", "nauseas"], "sikuani": "yaka", "fonetica": "ya-ka" },
-      { "es": ["diarrea", "estomago suelto"], "sikuani": "tseka", "fonetica": "tse-ka" },
-      { "es": ["serpiente", "culebra", "mordedura", "picadura"], "sikuani": "kowibo nekana", "fonetica": "ko-wi-bo ne-ka-na" },
-      { "es": ["embarazo", "bebe", "parto", "contracciones"], "sikuani": "peto pexiato", "fonetica": "pe-to pe-xia-to" },
-      { "es": ["agua", "liquido", "hidratacion", "beber"], "sikuani": "mera apa", "fonetica": "me-ra a-pa" },
-      { "es": ["medicina", "pastilla", "tratamiento", "remedio", "tomar"], "sikuani": "jeme ibane apa", "fonetica": "je-me i-ba-ne a-pa" },
-      { "es": ["dias", "semanas", "tiempo", "desde cuando"], "sikuani": "anijakujinae", "fonetica": "a-ni-ja-ku-ji-nae" }
-    ],
-    "respuestas_paciente_sikuani": [
-      { "id": 1, "sikuani_audio": "Tajamatabüi pemata juka, atsipa jani anijakujinae.", "fonetica": "Ta-ja-ma-ta-büi pe-ma-ta ju-ka, at-si-pa ja-ni a-ni-ja-ku-ji-nae", "traduccion_es": "Me duele mucho la cabeza y tengo fiebre alta desde hace dos días.", "alerta_triage": "Síndrome Febril / Posible Malaria o Dengue", "prioridad": "Amarillo", "zona": "Cabeza" },
-      { "id": 2, "sikuani_audio": "Pexania juka xanepana, aje yabara apo xania.", "fonetica": "Pe-xa-nia ju-ka xa-ne-pa-na, a-je ya-ba-ra a-po xa-nia", "traduccion_es": "Siento un dolor muy fuerte en el pecho y no puedo respirar bien.", "alerta_triage": "Insuficiencia Respiratoria / Alerta Torácica", "prioridad": "Rojo", "zona": "Pecho" },
-      { "id": 3, "sikuani_audio": "Kowibo nekana taxuipa, juka jani.", "fonetica": "Ko-wi-bo ne-ka-na ta-xui-pa, ju-ka ja-ni", "traduccion_es": "Me mordió una serpiente en la pierna, el dolor es insoportable.", "alerta_triage": "Accidente Ofídico Crítico", "prioridad": "Rojo", "zona": "Extremidades" },
-      { "id": 4, "sikuani_audio": "Pexiato pekotsi juka, yaka, tseka mera apo apa.", "fonetica": "Pe-xia-to pe-ko-tsi ju-ka, ya-ka, tse-ka me-ra a-po a-pa", "traduccion_es": "El niño tiene dolor de estómago, vómito y diarrea, no recibe agua.", "alerta_triage": "Deshidratación Pediátrica Aguda", "prioridad": "Naranja", "zona": "Abdomen" },
-      { "id": 5, "sikuani_audio": "Peto juka neba, mera pona, pexiato apo nawiata.", "fonetica": "Pe-to ju-ka ne-ba, me-ra po-na, pe-xia-to a-po na-wia-ta", "traduccion_es": "Tengo contracciones fuertes, salió líquido y no siento mover al bebé.", "alerta_triage": "Urgencia Obstétrica Mayor", "prioridad": "Rojo", "zona": "Abdomen" }
-    ],
-    "frases_rapidas": [
-      { "id": 1, "categoria": "Urgencia", "zona": "General", "color": "#EF4444", "espanol": "¿Dónde le duele exactamente? Señale con la mano.", "sikuani": "Detsa jiwi juka? Kbepona.", "fonetica": "Det-sa ji-wi ju-ka? K-be-po-na" },
-      { "id": 2, "categoria": "Urgencia", "zona": "Extremidades", "color": "#EF4444", "espanol": "¿Fue mordedura de serpiente o picadura de raya?", "sikuani": "Kowibo jiwi nekana o bürü?", "fonetica": "Ko-wi-bo ji-wi ne-ka-na o bü-rü" },
-      { "id": 3, "categoria": "Síntomas", "zona": "Pecho", "color": "#F59E0B", "espanol": "¿Siente presión fuerte en el pecho o le falta el aire?", "sikuani": "Pexania juka neba? Aje yabara?", "fonetica": "Pe-xa-nia ju-ka ne-ba? A-je ya-ba-ra" },
-      { "id": 4, "categoria": "Materno", "zona": "Abdomen", "color": "#8B5CF6", "espanol": "¿Tiene contracciones fuertes o salida de líquido?", "sikuani": "Peto juka neba? Mera pona?", "fonetica": "Pe-to ju-ka ne-ba? Me-ra po-na" },
-      { "id": 5, "categoria": "Tratamiento", "zona": "General", "color": "#10B981", "espanol": "Tome esta medicina cada 8 horas con abundante agua.", "sikuani": "Jeme ibane apa mera barapo.", "fonetica": "Je-me i-ba-ne a-pa me-ra ba-ra-po" }
-    ]
-  }
-  </script>
+  <footer class="pie">
+    <p>Prototipo de Edisson Vega Izquierdo. Funciona sin internet una vez instalado; lo que escribes no sale de este equipo.</p>
+  </footer>
+  <div class="aviso-flotante" id="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

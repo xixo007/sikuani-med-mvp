@@ -1,14 +1,15 @@
 {
-  "name": "Sikuani Med Pro (prototipo)",
-  "short_name": "Sikuani Med",
-  "description": "Prototipo de demostración de interpretación clínica español–sikuani y triage. La conversación en sikuani es simulada.",
+  "name": "Traductor Sikuani",
+  "short_name": "Sikuani",
+  "description": "Traductor español ↔ sikuani que funciona sin conexión. Prototipo de demostración con vocabulario de ejemplo sin validar.",
   "lang": "es-CO",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#F8FAFC",
-  "theme_color": "#0F172A",
+  "background_color": "#f4f1ea",
+  "theme_color": "#0f2a25",
   "icons": [
+    { "src": "iconos/icono.svg", "sizes": "any", "type": "image/svg+xml" },
     { "src": "iconos/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "iconos/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]

@@ -1,44 +1,43 @@
-# Sikuani Med Pro — prototipo de demostración
+# Traductor Sikuani — prototipo de demostración
 
-Maqueta navegable de una suite clínica para brigadas y puestos de salud de la Orinoquía: consulta bilingüe español–sikuani, triage Manchester con mapa corporal, sala de espera y exportación de registros.
+Traductor español ↔ sikuani que funciona en el celular, la tableta o el computador **sin conexión a internet**.
 
-Autor: Edisson Vega Izquierdo (ADSO).
+Autor del prototipo: Edisson Vega Izquierdo (ADSO).
 
 ## Estado real
 
-- **Es una demostración.** La conversación en sikuani es simulada con cinco respuestas de ejemplo; no hay reconocimiento de voz, traducción ni síntesis de voz para sikuani.
-- **El vocabulario sikuani no está validado** por hablantes ni por un lingüista. La app lo marca como «no validado» y no debe usarse para decisiones clínicas.
-- El micrófono del profesional usa el reconocimiento de voz en español del navegador cuando está disponible; si no, también se simula y se rotula «SIMULADO».
+- **Es una demostración.** Traduce solo 10 frases y 16 palabras de ejemplo. Ese vocabulario **no está validado** por hablantes sikuani ni por un lingüista, y la app lo indica en cada resultado.
+- Si el texto no coincide con una frase de ejemplo, muestra las palabras sueltas que reconoce. Si tampoco hay palabras, lo dice. Nunca inventa una traducción.
+- **Dictado:** en español usa el reconocimiento de voz del navegador cuando está disponible. En sikuani aún no hay dictado.
+- **Escuchar:** en español usa una voz instalada en el equipo. En sikuani hace una lectura aproximada con esa misma voz, porque todavía no hay voz sikuani integrada.
+
+El traductor real (modelos entrenados con un corpus validado por la comunidad) se describe en la propuesta del proyecto.
 
 ## Cómo se ejecuta
 
-Es HTML, CSS y JavaScript sin dependencias. Debe servirse por `http://localhost` o `https://` (el cifrado y el modo sin conexión no funcionan abriendo el archivo directamente):
+Es HTML, CSS y JavaScript sin dependencias. Debe servirse por `http://localhost` o `https://` para poder instalarse y funcionar sin conexión:
 
 ```bash
 python -m http.server 8000
 ```
 
-Abrir `http://localhost:8000`. La primera vez pide crear un PIN.
+Después se abre `http://localhost:8000`. Tras la primera visita, la app abre aunque no haya red. Los navegadores la ofrecen para «Instalar».
 
-## Datos y privacidad
+## Arquitectura
 
-- Los registros de pacientes se guardan **cifrados** en el navegador (AES-GCM de 256 bits; clave derivada del PIN con PBKDF2-SHA-256, 250.000 iteraciones). El PIN no se guarda: si se olvida, los datos no se pueden recuperar (botón «Olvidé el PIN» borra todo).
-- Si había datos de una versión anterior en texto plano, se cifran al crear el PIN y se borra la copia sin cifrar.
-- «Usar sin guardar» abre la app solo en memoria, para demostraciones.
-- Los archivos exportados (CSV/JSON) **no van cifrados**.
-
-## Sin conexión (PWA)
-
-`manifest.webmanifest` y `sw.js` permiten instalar la app y abrirla sin red después de la primera visita. El service worker usa red primero y caché como respaldo; al publicar una versión nueva, cambiar `VERSION` en `sw.js`.
-
-## Archivos
-
-| Archivo | Contenido |
+| Archivo | Función |
 |---|---|
-| `index.html` | Estructura, datos de ejemplo embebidos y diálogo de PIN |
-| `styles.css` | Estilos; las correcciones de interfaz están en el bloque final «CORRECCIONES DE INTERFAZ» |
-| `app.js` | Lógica de la app |
-| `cifrado.js` | Bóveda local cifrada (`window.BovedaLocal`) |
-| `sw.js`, `manifest.webmanifest`, `iconos/` | Instalación y uso sin conexión |
+| `index.html` | Estructura de la interfaz |
+| `styles.css` | Diseño (modo claro y oscuro automáticos) |
+| `app.js` | Interfaz: dirección de traducción, dictado, voz, copiar, favoritas y recientes |
+| `motor.js` | Motor de traducción. Contrato `Motor.traducir(texto, origen, destino)` → `{ tipo, texto, fonetica, palabras, confianza }` |
+| `datos.js` | Frases y palabras de ejemplo (sin validar) |
+| `sw.js`, `manifest.webmanifest`, `iconos/` | Instalación y uso sin conexión. El service worker busca primero en la red y, si no hay, usa la caché. Cambiar `VERSION` en cada publicación |
+
+Para conectar el modelo real basta con reemplazar el motor de ejemplo por otro que cumpla el mismo contrato. La interfaz no cambia.
+
+## Privacidad
+
+Lo que se escribe no sale del equipo. Favoritas y recientes se guardan solo en el navegador y se pueden borrar desde la app.
 
 Pendiente de decidir por el autor: la licencia del código.
